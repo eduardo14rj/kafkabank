@@ -5,3 +5,4 @@ export const kafka = new KafkaJS.Kafka({
 });
 
 export const newProducer = () => kafka.producer();
+export type Producer = ReturnType<typeof newProducer>;
