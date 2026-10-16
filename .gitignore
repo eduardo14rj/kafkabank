@@ -30,3 +30,7 @@ Thumbs.db
 
 
 docs/entendimentos.md
+
+kafkabank.db
+kafkabank.db-wal
+kafkabank.db-shm
