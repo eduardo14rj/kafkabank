@@ -1,3 +1,27 @@
+.events-dashboard {
+  padding: 24px;
+  text-align: left;
+}
+
+.events-dashboard section {
+  margin-top: 32px;
+}
+
+.event-list {
+  list-style: none;
+  padding: 0;
+}
+
+.event-list li {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.event-list pre {
+  overflow-x: auto;
+  font-family: var(--mono);
+}
+
 .counter {
   font-size: 16px;
   padding: 5px 10px;

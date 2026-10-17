@@ -1,122 +1,48 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
 import './App.css'
+import type { SseEvent } from './types'
+import { useEvents } from './useEvents'
+import { useTotal } from "./hooks/useTotal"
+const EXPECTED = 1_000_000_000 // 10.000 contas × R$ 1.000,00, em centavos
+const brl = (cents: number) =>
+  (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+
+function describe(e: SseEvent) {
+  if (!e.value) return { id: Math.random().toString(), text: e.topic }
+  const t = JSON.parse(e.value)
+  return { id: t.transferId as string, text: `${t.from} → ${t.to} | R$ ${(t.amount / 100).toFixed(2)}` }
+}
 
 function App() {
-  const [count, setCount] = useState(0)
+  const { connected, events, counts } = useEvents()
+  const total = useTotal()
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <main style={{ maxWidth: 600, margin: '2rem auto', fontFamily: 'sans-serif' }}>
+      <h1>KafkaBank</h1>
+      <p>{connected ? '🟢 Conectado' : '🔴 Desconectado'}</p>
+      <p>
+        ✅ Aprovadas: <b>{counts.completed}</b> | ❌ Rejeitadas: <b>{counts.rejected}</b>
+      </p>
 
-      <div className="ticks"></div>
+      <h2>Últimos eventos</h2>
+      <ul>
+        {events.map((e) => {
+          const d = describe(e)
+          return (
+            <li key={d.id}>
+              {e.topic === 'transfers.completed' ? '✅' : '❌'} {d.text}
+            </li>
+          )
+        })}
+      </ul>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      <p>
+        💰 Total nas contas: <b>{total === null ? '...' : brl(total)}</b>{' '}
+        {total !== null && (total === EXPECTED ? '✅ íntegro' : '⚠️ DIVERGENTE')}
+      </p>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+    </main>
+  );
 }
 
 export default App

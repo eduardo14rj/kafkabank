@@ -1,11 +1,40 @@
-import { kafka } from "./kafka.js";
-import { processTransfer } from "./test/db/repository.js";
-import type { Transfer } from "./types/transfer.js";
+import { kafka, newProducer } from "./kafka.js";
+import { processTransfer, TransferResult } from "./test/db/repository.js";
+import type { RejectedTransfer, Transfer } from "./types/transfer.js";
 
 const CONSUMERS = 3
 
+const producer = newProducer();
+await producer.connect();
+
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const stats = { completed: 0, rejected: 0, duplicate: 0 };
+
+async function publishResult(transfer: Transfer, result: TransferResult) {
+    if (result === "duplicate") return; // não publica duplicatas
+    if (result === "completed") {
+        await producer.send({
+            topic: "transfers.completed",
+            messages: [
+                {
+                    key: String(transfer.from),
+                    value: JSON.stringify(transfer)
+                }
+            ]
+        })
+        return;
+    }
+    const rejected: RejectedTransfer = { ...transfer, motivo: "saldo_insuficiente" };
+    await producer.send({
+        topic: "transfers.rejected",
+        messages: [
+            {
+                key: String(transfer.from),
+                value: JSON.stringify(rejected)
+            }
+        ]
+    })
+}
 
 async function startConsumer(name: string) {
     const consumer = kafka.consumer({
@@ -25,6 +54,8 @@ async function startConsumer(name: string) {
             const transfer = JSON.parse(message.value.toString()) as Transfer;
             const result = processTransfer.immediate(transfer);
             stats[result]++;
+
+            await publishResult(transfer, result);
 
             console.log(`[${name}] P${partition} #${message.offset} | ${transfer.from} → ${transfer.to} | ${transfer.amount} | ${result}`);
 
